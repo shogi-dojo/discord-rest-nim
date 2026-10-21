@@ -24,8 +24,11 @@ Nim standard library. HTTPS and signature verification use OpenSSL 3.
 
 ```sh
 nimble test
-ruby tests/fixtures/http_contract.rb tests/bin/discordrest_probe
 ```
+
+The `nimble test` task runs the Nim unit suites and the Ruby 4.0.7 loopback
+contract fixture, including connection reuse, the four-connection cap, peer
+disconnects, a lost response after an accepted POST, and an untrusted TLS peer.
 
 Build with `-d:ssl`; install OpenSSL 3 development files (Linux) or
 `openssl@3` (macOS). The async client and its HTTP connections belong to one
