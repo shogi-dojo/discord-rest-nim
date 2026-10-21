@@ -103,6 +103,21 @@ proc removeWaiter(pool: ConnectionPool, waiter: PoolWaiter) =
       pool.waiters.delete(index)
       break
 
+proc release(pool: ConnectionPool, index: int, discardConnection = false) =
+  if index < 0 or index >= pool.slots.len: return
+  let slot = pool.slots[index]
+  if discardConnection or pool.closed: slot.client.close()
+  slot.busy = false
+  if pool.closed: return
+  while pool.waiters.len > 0:
+    let waiter = pool.waiters[0]
+    pool.waiters.delete(0)
+    if waiter.future.finished: continue
+    slot.busy = true
+    slot.origin = waiter.origin
+    waiter.future.complete(index)
+    break
+
 proc acquire(pool: ConnectionPool, origin: string,
              cancellation: CancellationToken): Future[int] {.async.} =
   cancellation.checkCancellation()
@@ -133,24 +148,12 @@ proc acquire(pool: ConnectionPool, origin: string,
     cancellation.checkCancellation()
   except CatchableError:
     pool.removeWaiter(waiter)
+    # `release` may have handed this waiter a slot before the cancellation was seen;
+    # give it back, or the pool loses that connection for good.
+    if waiter.future.finished and not waiter.future.failed: pool.release(waiter.future.read)
     raise
   finally:
     cancellation.removeCancelCallback(cancelId)
-
-proc release(pool: ConnectionPool, index: int, discardConnection = false) =
-  if index < 0 or index >= pool.slots.len: return
-  let slot = pool.slots[index]
-  if discardConnection or pool.closed: slot.client.close()
-  slot.busy = false
-  if pool.closed: return
-  while pool.waiters.len > 0:
-    let waiter = pool.waiters[0]
-    pool.waiters.delete(0)
-    if waiter.future.finished: continue
-    slot.busy = true
-    slot.origin = waiter.origin
-    waiter.future.complete(index)
-    break
 
 proc close(pool: ConnectionPool) =
   if pool == nil or pool.closed: return

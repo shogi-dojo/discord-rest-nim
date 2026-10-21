@@ -213,6 +213,27 @@ suite "Discord rate limits":
     check calls == 1
     client.close()
 
+  test "a waiter cancelled after it was handed the bucket passes the bucket on":
+    # Without a dispatcher, futures run their callbacks at once and the race cannot happen.
+    discard getGlobalDispatcher()
+    let limiter = newRateLimiter()
+    let first = waitFor limiter.acquire(dhmGet, "/channels/9/messages", newCancellationToken())
+    let cancellation = newCancellationToken()
+    let handedOver = limiter.acquire(dhmGet, "/channels/9/messages", cancellation)
+    # The release completes the waiter at once but resumes it only on the next poll,
+    # so this cancellation lands after the bucket was already handed over.
+    limiter.release(first)
+    cancellation.cancel()
+    var cancelled = false
+    try:
+      discard waitFor handedOver
+    except DiscordError as error:
+      cancelled = error.kind == deCancelled
+    check cancelled
+    let later = limiter.acquire(dhmGet, "/channels/9/messages", newCancellationToken())
+    check waitFor withTimeout(later, 100)
+    limiter.release(later.read)
+
   test "limiter state is per client, including global windows":
     let firstClock = TestClock(now: 200.0, sleeps: @[])
     let secondClock = TestClock(now: 200.0, sleeps: @[])

@@ -69,8 +69,7 @@ proc removeWaiter(bucket: RateBucket, waiter: Future[void]) =
       bucket.waiters.delete(index)
       break
 
-proc release(limiter: RateLimiter, key: string) =
-  let bucket = limiter.bucketFor(key)
+proc release(bucket: RateBucket) =
   bucket.busy = false
   while bucket.waiters.len > 0:
     let waiter = bucket.waiters[0]
@@ -79,6 +78,9 @@ proc release(limiter: RateLimiter, key: string) =
     bucket.busy = true
     waiter.complete()
     break
+
+proc release(limiter: RateLimiter, key: string) =
+  limiter.bucketFor(key).release()
 
 proc waitForLock(limiter: RateLimiter, bucket: RateBucket,
                  cancellation: CancellationToken) {.async.} =
@@ -97,6 +99,9 @@ proc waitForLock(limiter: RateLimiter, bucket: RateBucket,
     cancellation.checkCancellation()
   except CatchableError:
     bucket.removeWaiter(waiter)
+    # `release` may have handed this waiter the bucket before the cancellation was seen;
+    # pass it on, or every later request on this bucket waits forever.
+    if waiter.finished and not waiter.failed: bucket.release()
     raise
   finally:
     cancellation.removeCancelCallback(cancelId)
