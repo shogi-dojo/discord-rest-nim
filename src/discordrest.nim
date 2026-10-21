@@ -1,4 +1,4 @@
 ## Public import for the discordrest package.
 
-import discordrest/[client, errors, ratelimits, transport, types]
-export client, errors, ratelimits, transport, types
+import discordrest/[client, endpoints, errors, interactions, oauth, ratelimits, transport, types]
+export client, endpoints, errors, interactions, oauth, ratelimits, transport, types

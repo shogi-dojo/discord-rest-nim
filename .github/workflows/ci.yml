@@ -1,0 +1,41 @@
+name: Nim Discord client
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: "2.2.12"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0.7"
+      - name: Install OpenSSL 3
+        if: runner.os == 'macOS'
+        run: |
+          brew install openssl@3
+          echo "OPENSSL_DIR=$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
+      - name: Install package into an empty Nimble home
+        shell: bash
+        run: |
+          nimble_home="$(mktemp -d)"
+          nimble --nimbleDir:"$nimble_home" install -y .
+          package_path="$(nimble --nimbleDir:"$nimble_home" path discordrest)"
+          cat > "$RUNNER_TEMP/discordrest_smoke.nim" <<'EOF'
+          import discordrest
+          doAssert httpMethodName(dhmGet) == "GET"
+          EOF
+          cd "$RUNNER_TEMP"
+          nim --hints:off c --path:"$package_path/src" discordrest_smoke.nim
+      - name: Run package and loopback suites
+        run: nimble test
