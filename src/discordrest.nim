@@ -1,11 +1,4 @@
 ## Public import for the discordrest package.
 
-type
-  DiscordHttpMethod* = enum
-    dhmGet = "GET"
-    dhmPost = "POST"
-    dhmPut = "PUT"
-    dhmPatch = "PATCH"
-    dhmDelete = "DELETE"
-
-proc httpMethodName*(httpMethod: DiscordHttpMethod): string = $httpMethod
+import discordrest/[client, endpoints, errors, interactions, oauth, ratelimits, transport, types]
+export client, endpoints, errors, interactions, oauth, ratelimits, transport, types
