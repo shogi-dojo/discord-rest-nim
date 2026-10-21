@@ -29,13 +29,13 @@ jobs:
         shell: bash
         run: |
           nimble_home="$(mktemp -d)"
-          nimble --nimbleDir:"$nimble_home" install -y .
+          nimble --nimbleDir:"$nimble_home" install -y
           package_path="$(nimble --nimbleDir:"$nimble_home" path discordrest)"
           cat > "$RUNNER_TEMP/discordrest_smoke.nim" <<'EOF'
           import discordrest
           doAssert httpMethodName(dhmGet) == "GET"
           EOF
           cd "$RUNNER_TEMP"
-          nim --hints:off c --path:"$package_path/src" discordrest_smoke.nim
+          nim --hints:off c --path:"$package_path" discordrest_smoke.nim
       - name: Run package and loopback suites
         run: nimble test
