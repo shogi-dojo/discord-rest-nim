@@ -20,7 +20,7 @@ After the initial public release, install an exact tested commit without
 credentials:
 
 ```sh
-nimble install https://github.com/shogi-dojo/discord-rest-nim@<full-commit-sha>
+nimble install https://github.com/shogi-dojo/discord-rest-nim#<full-commit-sha>
 ```
 
 Then import `discordrest`. The library has no package dependencies outside the
