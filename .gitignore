@@ -1,0 +1,6 @@
+nimcache/
+tests/nimcache/
+tests/bin/
+*.o
+*.c
+*.exe
